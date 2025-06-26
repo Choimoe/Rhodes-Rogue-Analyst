@@ -19,7 +19,7 @@ class HeaderFrame(ttk.Frame):
     def update_content(self, player_info, theme_name, career_summary):
         self.player_label.config(text=f"{player_info.get('name', 'N/A')} (Lv.{player_info.get('level', 'N/A')})")
         self.theme_label.config(text=theme_name or "")
-        summary_text = f"累计投资: {career_summary.get('invest', 'N/A')} | 累计节点: {career_summary.get('node', 'N/A')} | 累计步数: {career_summary.get('step', 'N/A')}"
+        summary_text = f"总投资: {career_summary.get('invest', 'N/A')} | 总节点: {career_summary.get('node', 'N/A')} | 总步数: {career_summary.get('step', 'N/A')}"
         self.career_label.config(text=summary_text)
 
 

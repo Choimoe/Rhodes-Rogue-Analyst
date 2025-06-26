@@ -13,8 +13,8 @@ class AppWindow(tk.Tk):
 
     def setup_window(self):
         self.title("集成战略数据分析")
-        self.geometry("480x820")
-        self.minsize(460, 600)
+        self.geometry("360x820")
+        self.minsize(320, 350)
         self.configure(bg=self.style_manager.theme["colors"]["bg"])
 
     def create_widgets(self):
