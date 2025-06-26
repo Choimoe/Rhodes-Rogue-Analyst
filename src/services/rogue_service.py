@@ -1,9 +1,8 @@
 import logging
-from typing import Optional, Dict, Any, List
-from src.player import PlayerClient
-from src.config import ENDPOINTS, ROGUE_RECENT_RUNS_COUNT
+from typing import Optional, Dict, Any
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta
+from .data_manager import DataManager
 
 RELIC_MAPPING = {
     "ENDING_2": "rogue_4_relic_final_1",
@@ -17,52 +16,47 @@ RELIC_MAPPING = {
 }
 
 
-class RogueClient:
-    def __init__(self, player_client: PlayerClient):
-        if not isinstance(player_client, PlayerClient) or not player_client.is_ready:
-            raise ValueError("A ready PlayerClient instance is required.")
-        self.player_client = player_client
+class RogueService:
+    def __init__(self, skland_client):
+        self.client = skland_client
+        self.db_manager = DataManager()
 
-    def get_rogue_info(self) -> Optional[Dict[str, Any]]:
-        logging.info("Fetching detailed rogue-like data from dedicated endpoint...")
-        params = {"uid": self.player_client.uid}
-        full_url_for_signing = f"{ENDPOINTS['ROGUE_INFO']}?uid={params['uid']}"
+    def get_analysis_for_theme(self, theme_name: str) -> Optional[Dict[str, Any]]:
+        raw_data = self.client.get_rogue_info()
+        if not raw_data: return None
 
-        try:
-            headers = self.player_client._generate_signature_headers(url=full_url_for_signing)
-            response = self.player_client.session.get(ENDPOINTS["ROGUE_INFO"], params=params, headers=headers,
-                                                      timeout=10)
-            response.raise_for_status()
-            data = response.json()
+        target_topic = next((t for t in raw_data.get("topics", []) if t.get("name") == theme_name), None)
+        if not target_topic: return None
 
-            if data.get("code") == 0:
-                logging.info("Successfully fetched rogue-like data.")
-                return data.get("data")
-            else:
-                logging.error(f"API Error fetching rogue data: {data.get('message', 'Unknown error')}")
-                return None
-        except Exception as e:
-            logging.error(f"An unexpected error occurred while fetching rogue data: {e}")
-            return None
+        if new_records := raw_data.get("history", {}).get("records"):
+            self.db_manager.merge_and_save_runs(self.client.uid, theme_name, new_records)
+
+        all_records = self.db_manager.get_all_runs(self.client.uid, theme_name)
+        if not all_records: return None
+
+        return self._analyze_records(raw_data, all_records, theme_name)
 
     def _determine_ending(self, record: Dict[str, Any]) -> tuple[str, bool]:
         relics = record.get("gainRelicList", [])
         is_rolling = RELIC_MAPPING["ROLLING"] in relics
 
-        ending_parts = []
-        if is_rolling:
-            ending_parts.append("滚动")
+        if record.get("success") != 1:
+            last_stage = record.get("lastStage")
+            ending_text = f"驻足于: {last_stage or '事件'}"
+            if is_rolling:
+                ending_text += " (滚动)"
+            return ending_text, is_rolling
 
-        ending_numbers = []
-        if RELIC_MAPPING["ENDING_2"] in relics:
-            ending_numbers.append("2")
-        else:
-            ending_numbers.append("1")
-        if RELIC_MAPPING["ENDING_3"] in relics: ending_numbers.append("3")
-        if RELIC_MAPPING["ENDING_4"] in relics: ending_numbers.append("4")
-        if RELIC_MAPPING["ENDING_5"] in relics: ending_numbers.append("5")
+        ending_parts = ["滚动"] if is_rolling else []
+        ending_numbers = sorted(
+            [num for id, num in [("ENDING_2", "2"), ("ENDING_3", "3"), ("ENDING_4", "4"), ("ENDING_5", "5")] if
+             RELIC_MAPPING[id] in relics])
 
-        ending_parts.append("".join(sorted(ending_numbers)))
+        if "2" not in ending_numbers:
+            ending_parts.insert(0 if not is_rolling else 1, "1")
+
+        ending_parts.append("".join(ending_numbers))
+
         if "5" in ending_numbers:
             if RELIC_MAPPING["EGG_SUPER"] in relics:
                 ending_parts.append("超大蛋")
@@ -71,75 +65,64 @@ class RogueClient:
             elif RELIC_MAPPING["EGG_SMALL"] in relics:
                 ending_parts.append("小蛋")
 
-        return " ".join(ending_parts), is_rolling
+        return f"完成结局: {' '.join(ending_parts)}", is_rolling
 
-    def get_theme_analysis(self, full_rogue_data: Dict[str, Any], theme_name: str) -> Optional[Dict[str, Any]]:
-        if not full_rogue_data: return None
-        target_topic = next((t for t in full_rogue_data.get("topics", []) if t.get("name") == theme_name), None)
-        if not target_topic: return None
+    def _calculate_max_streak(self, records_bool_list):
+        max_streak, current_streak = 0, 0
+        for is_win in records_bool_list:
+            if is_win:
+                current_streak += 1
+            else:
+                max_streak = max(max_streak, current_streak)
+                current_streak = 0
+        return max(max_streak, current_streak)
 
-        history = full_rogue_data.get("history", {})
-        career = full_rogue_data.get("career", {})
-        game_user_info = full_rogue_data.get("gameUserInfo", {})
-        if not history or not (records := history.get("records")): return None
+    def _analyze_records(self, raw_data, all_records, theme_name):
+        valid_records = [r for r in all_records if r.get("score", 0) > 100]
+        seven_days_ago = datetime.now() - timedelta(days=7)
+        seven_day_records = [r for r in valid_records if
+                             datetime.fromtimestamp(int(r.get("startTs", 0))) > seven_days_ago]
 
-        total_runs = len(records)
-        successful_runs = [r for r in records if r.get("success") == 1]
-        win_rate = (len(successful_runs) / total_runs * 100) if total_runs > 0 else 0
+        def get_stats(records):
+            total = len(records)
+            if not total: return {"win_rate": "0.00%", "max_streak": 0, "fifth_rate": "0.00%", "max_fifth_streak": 0}
 
-        fifth_ending_wins = [r for r in successful_runs if self._determine_ending(r)[0].startswith(("5", "滚动 5"))]
-        fifth_ending_overall_rate = (len(fifth_ending_wins) / total_runs * 100) if total_runs > 0 else 0
+            wins = [r for r in records if r.get("success") == 1]
+            win_rate = (len(wins) / total) * 100
+            max_streak = self._calculate_max_streak([r.get("success") == 1 for r in records])
 
-        current_win_streak = sum(1 for r in reversed(records) if r.get("success") == 1) if records and records[0].get(
-            "success") == 1 else 0
-        current_fifth_ending_streak = sum(
-            1 for r in reversed(records) if self._determine_ending(r)[0].startswith(("5", "滚动 5"))) if records and \
-                                                                                                         self._determine_ending(
-                                                                                                             records[
-                                                                                                                 0])[
-                                                                                                             0].startswith(
-                                                                                                             ("5",
-                                                                                                              "滚动 5")) else 0
+            fifth_wins = [r for r in wins if self._determine_ending(r)[0].startswith("完成结局: 5") or "滚动 5" in
+                          self._determine_ending(r)[0]]
+            fifth_rate = (len(fifth_wins) / total) * 100
+            max_fifth_streak = self._calculate_max_streak([(r.get("success") == 1 and (
+                        self._determine_ending(r)[0].startswith("完成结局: 5") or "滚动 5" in self._determine_ending(r)[
+                    0])) for r in records])
 
-        squad_counts = Counter(r.get("band", {}).get("name") for r in records if r.get("band", {}).get("name"))
-        squad_frequency = " | ".join([f"{name}({count})" for name, count in squad_counts.most_common()])
+            return {"win_rate": f"{win_rate:.2f}%", "max_streak": max_streak, "fifth_rate": f"{fifth_rate:.2f}%",
+                    "max_fifth_streak": max_fifth_streak}
+
+        total_stats = get_stats(valid_records)
+        seven_day_stats = get_stats(seven_day_records)
 
         detailed_recent_runs = []
-        for record in records[:ROGUE_RECENT_RUNS_COUNT]:
-            start_ts = int(record.get("startTs", 0))
-            end_ts = int(record.get("endTs", 0))
-            is_success = record.get("success") == 1
-
-            if is_success:
-                ending_str, is_rolling = self._determine_ending(record)
-                ending_text = f"完成: {ending_str}"
-            else:
-                last_stage = record.get("lastStage")
-                ending_text = f"驻足在 {last_stage or '事件'}"
-                is_rolling = False
-
+        for record in all_records[:self.client.config.getint("APP", "ROGUE_RECENT_RUNS_COUNT")]:
+            ending_str, is_rolling = self._determine_ending(record)
             detailed_recent_runs.append({
-                "difficulty": record.get("modeGrade", "N/A"),
-                "squad": record.get("band", {}).get("name", "N/A"),
-                "score": record.get("score", "N/A"),
-                "is_success": is_success,
-                "ending": ending_text,
+                "difficulty": record.get("modeGrade", "N/A"), "squad": record.get("band", {}).get("name", "N/A"),
+                "score": record.get("score", "N/A"), "is_success": record.get("success") == 1, "ending": ending_str,
                 "is_rolling": is_rolling,
-                "start_date": datetime.fromtimestamp(start_ts).strftime('%m-%d') if start_ts > 0 else "N/A",
-                "duration_hours": f"{(end_ts - start_ts) / 3600:.1f}h" if start_ts > 0 and end_ts > 0 else "N/A",
+                "start_date": datetime.fromtimestamp(int(record.get("startTs", 0))).strftime('%m-%d'),
+                "duration_hours": f"{(int(record.get('endTs', 0)) - int(record.get('startTs', 0))) / 3600:.1f}h",
                 "totem_count": sum(item.get('count', 0) for item in record.get("totemList", []) if
                                    item.get('id') == 'rogue_4_fragment_I_1'),
             })
 
         return {
-            "player_info": {"name": game_user_info.get("name"), "level": game_user_info.get("level")},
-            "career_summary": {"total_invested": career.get("invest"), "total_nodes": career.get("node"),
-                               "total_steps": career.get("step")},
-            "recent_stats": {
-                "win_rate": f"{win_rate:.2f}%", "current_win_streak": current_win_streak,
-                "fifth_ending_overall_rate": f"{fifth_ending_overall_rate:.2f}%",
-                "current_fifth_ending_streak": current_fifth_ending_streak,
-                "squad_frequency": squad_frequency,
+            "player_info": raw_data.get("gameUserInfo", {}),
+            "career_summary": raw_data.get("career", {}),
+            "stats": {
+                "total_runs": len(valid_records), "total_stats": total_stats,
+                "seven_day_runs": len(seven_day_records), "seven_day_stats": seven_day_stats
             },
             "theme_summary": {"name": theme_name, "detailed_recent_runs": detailed_recent_runs}
         }
