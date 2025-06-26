@@ -1,0 +1,19 @@
+{
+  "colors": {
+    "bg": "#2e2e2e",
+    "fg": "#e0e0e0",
+    "accent": "#5f9ea0",
+    "success": "#81c784",
+    "fail": "#e57373",
+    "rolling": "#ff6961"
+  },
+  "fonts": {
+    "family": "Microsoft YaHei",
+    "normal": 12,
+    "bold": 12,
+    "score": 14,
+    "large_bold": 16,
+    "small": 10,
+    "ending": 10
+  }
+}
