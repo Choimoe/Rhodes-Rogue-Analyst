@@ -43,7 +43,7 @@ jobs:
         run: |
           pyinstaller main.py \
             --name "Rhodes-Rogue-Analyst" \
-            --onefile \
+            --onedir \
             --noconsole \
             --add-data "config/app_config.ini:config" \
             --add-data "config/ui_theme.json:config" \
@@ -52,20 +52,23 @@ jobs:
             --clean \
             --noconfirm
 
-      - name: Prepare Release Artifact
-        run: |
-          $ASSET_NAME = "Rhodes-Rogue-Analyst-${{ matrix.asset_name_suffix }}.zip"
-          if ($env:RUNNER_OS -eq 'Windows') {
-            Compress-Archive -Path dist/Rhodes-Rogue-Analyst.exe -DestinationPath $ASSET_NAME
-          } else {
-            zip -j $ASSET_NAME dist/Rhodes-Rogue-Analyst
-          }
-          echo "ASSET_PATH=$ASSET_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Prepare Release Artifact (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
+        run: |
+          Compress-Archive -Path dist/Rhodes-Rogue-Analyst -DestinationPath Rhodes-Rogue-Analyst-${{ matrix.asset_name_suffix }}.zip
+          echo "ASSET_PATH=Rhodes-Rogue-Analyst-${{ matrix.asset_name_suffix }}.zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Prepare Release Artifact (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd dist
+          zip -r ../Rhodes-Rogue-Analyst-${{ matrix.asset_name_suffix }}.zip Rhodes-Rogue-Analyst
+          echo "ASSET_PATH=Rhodes-Rogue-Analyst-${{ matrix.asset_name_suffix }}.zip" >> $GITHUB_ENV
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: ${{ env.ASSET_PATH }}
-
