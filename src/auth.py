@@ -1,11 +1,7 @@
 import requests
 import logging
 from typing import Optional, Tuple
-
-GRANT_URL = "https://as.hypergryph.com/user/oauth2/v2/grant"
-CRED_URL = "https://zonai.skland.com/api/v1/user/auth/generate_cred_by_code"
-APP_CODE = "4ca99fa6b56cc2ba"
-V_NAME = "1.21.0"
+from src.config import ENDPOINTS, APP_CODE, USER_AGENT
 
 
 class SklandAuthenticator:
@@ -14,9 +10,7 @@ class SklandAuthenticator:
             raise ValueError("Hypergryph token is required.")
         self.hypergryph_token = hypergryph_token
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": f"Skland/{V_NAME} (com.hypergryph.skland; build:102100065; Android 34; ) Okhttp/4.11.0",
-        })
+        self.session.headers.update({"User-Agent": USER_AGENT})
 
     def authenticate(self) -> Tuple[Optional[str], Optional[str]]:
         logging.info("Starting authentication process...")
@@ -35,7 +29,7 @@ class SklandAuthenticator:
         logging.info("Step 1: Fetching OAuth2 code...")
         payload = {"token": self.hypergryph_token, "appCode": APP_CODE, "type": 0}
         try:
-            response = self.session.post(GRANT_URL, json=payload, timeout=10)
+            response = self.session.post(ENDPOINTS["GRANT"], json=payload, timeout=10)
             response.raise_for_status()
             data = response.json()
             if data.get("status") == 0 and data.get("data", {}).get("code"):
@@ -50,7 +44,7 @@ class SklandAuthenticator:
         logging.info("Step 2: Fetching Skland cred and token...")
         payload = {"kind": 1, "code": code}
         try:
-            response = self.session.post(CRED_URL, json=payload, timeout=10)
+            response = self.session.post(ENDPOINTS["CRED_AUTH"], json=payload, timeout=10)
             response.raise_for_status()
             data = response.json()
             if data.get("code") == 0:

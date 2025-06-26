@@ -6,21 +6,15 @@ import hmac
 import logging
 from typing import Optional, Dict, Any
 from urllib.parse import urlparse, urlencode
-
-BINDING_URL = "https://zonai.skland.com/api/v1/game/player/binding"
-PLAYER_INFO_URL = "https://zonai.skland.com/api/v1/game/player/info"
-V_NAME = "1.21.0"
+from src.config import ENDPOINTS, V_NAME
 
 class PlayerClient:
     def __init__(self, session: requests.Session, cred: str, token: str):
         self.session = session
         self.cred = cred
-        self.token = token # Signing key
+        self.token = token
         self.uid = self._get_game_uid()
-        if self.uid:
-            self.is_ready = True
-        else:
-            self.is_ready = False
+        self.is_ready = bool(self.uid)
 
     def _generate_signature_headers(self, url: str, body: Optional[Dict] = None) -> Dict[str, str]:
         parsed_url = urlparse(url)
@@ -38,15 +32,14 @@ class PlayerClient:
     def _get_game_uid(self) -> Optional[str]:
         logging.info("Step 3: Fetching game account UID...")
         try:
-            headers = self._generate_signature_headers(url=BINDING_URL)
-            response = self.session.get(BINDING_URL, headers=headers, timeout=10)
+            headers = self._generate_signature_headers(url=ENDPOINTS["BINDING"])
+            response = self.session.get(ENDPOINTS["BINDING"], headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
             if data.get("code") == 0:
                 for game in data.get("data", {}).get("list", []):
                     if game.get("appCode") == "arknights":
-                        binding_list = game.get("bindingList", [])
-                        if binding_list:
+                        if binding_list := game.get("bindingList"):
                             uid = binding_list[0].get("uid")
                             logging.info(f"Found Arknights UID: {uid}")
                             return uid
@@ -60,7 +53,7 @@ class PlayerClient:
         if not self.is_ready:
             logging.error("PlayerClient is not ready. UID not found.")
             return None
-        url = f"{PLAYER_INFO_URL}?uid={self.uid}"
+        url = f"{ENDPOINTS['PLAYER_INFO']}?uid={self.uid}"
         logging.info(f"Requesting player info for UID: {self.uid}")
         try:
             headers = self._generate_signature_headers(url=url)
@@ -68,7 +61,6 @@ class PlayerClient:
             response.raise_for_status()
             data = response.json()
             if data.get("code") == 0:
-                logging.info("Successfully fetched player info.")
                 return data.get("data")
             logging.error(f"API Error on get_player_info: {data.get('message', 'Unknown API error')}")
             return None
