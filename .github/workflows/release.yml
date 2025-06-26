@@ -17,11 +17,11 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
-            asset_name: Rhodes-IS-Analyst-Linux
+            asset_name_suffix: Linux
           - os: macos-latest
-            asset_name: Rhodes-IS-Analyst-macOS
+            asset_name_suffix: macOS
           - os: windows-latest
-            asset_name: Rhodes-IS-Analyst-Windows.exe
+            asset_name_suffix: Windows
 
     steps:
       - name: Checkout code
@@ -39,28 +39,32 @@ jobs:
           pip install pyinstaller
 
       - name: Build with PyInstaller
-        run: pyinstaller build.spec --noconfirm --clean --onefile
-
-      - name: Prepare artifact for upload (Windows)
-        if: matrix.os == 'windows-latest'
         run: |
-          mkdir artifact
-          move dist/${{ matrix.asset_name }} artifact
-        shell: cmd
-
-      - name: Prepare artifact for upload (Linux/macOS)
-        if: matrix.os != 'windows-latest'
+          pyinstaller main.py \
+            --name "Rhodes-IS-Analyst" \
+            --onefile \
+            --noconsole \
+            --add-data "config/app_config.ini:config" \
+            --add-data "config/ui_theme.json:config" \
+            --add-data ".env.example:." \
+            --add-data "assets:assets" \
+            --clean \
+            --noconfirm
+            
+      - name: Prepare Release Artifact
         run: |
-          mkdir artifact
-          mv dist/${{ matrix.asset_name }} artifact/
-          cd artifact
-          zip -r ../${{ matrix.asset_name }}.zip .
-          cd ..
+          $ASSET_NAME = "Rhodes-IS-Analyst-${{ matrix.asset_name_suffix }}.zip"
+          if ($env:RUNNER_OS -eq 'Windows') {
+            Compress-Archive -Path dist/Rhodes-IS-Analyst.exe -DestinationPath $ASSET_NAME
+          } else {
+            zip -j $ASSET_NAME dist/Rhodes-IS-Analyst
+          }
+          echo "ASSET_PATH=$ASSET_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        shell: pwsh
 
-      - name: Upload artifact to release
+      - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: |
-            artifact/${{ matrix.asset_name }}*
-            ${{ matrix.asset_name }}.zip
+          files: ${{ env.ASSET_PATH }}
+
