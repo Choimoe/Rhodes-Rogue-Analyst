@@ -39,9 +39,10 @@ jobs:
           pip install pyinstaller
 
       - name: Build with PyInstaller
+        shell: bash
         run: |
           pyinstaller main.py \
-            --name "Rhodes-IS-Analyst" \
+            --name "Rhodes-Rogue-Analyst" \
             --onefile \
             --noconsole \
             --add-data "config/app_config.ini:config" \
@@ -50,14 +51,14 @@ jobs:
             --add-data "assets:assets" \
             --clean \
             --noconfirm
-            
+
       - name: Prepare Release Artifact
         run: |
-          $ASSET_NAME = "Rhodes-IS-Analyst-${{ matrix.asset_name_suffix }}.zip"
+          $ASSET_NAME = "Rhodes-Rogue-Analyst-${{ matrix.asset_name_suffix }}.zip"
           if ($env:RUNNER_OS -eq 'Windows') {
-            Compress-Archive -Path dist/Rhodes-IS-Analyst.exe -DestinationPath $ASSET_NAME
+            Compress-Archive -Path dist/Rhodes-Rogue-Analyst.exe -DestinationPath $ASSET_NAME
           } else {
-            zip -j $ASSET_NAME dist/Rhodes-IS-Analyst
+            zip -j $ASSET_NAME dist/Rhodes-Rogue-Analyst
           }
           echo "ASSET_PATH=$ASSET_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         shell: pwsh
