@@ -5,7 +5,9 @@
     "accent": "#5f9ea0",
     "success": "#81c784",
     "fail": "#e57373",
-    "rolling": "#ff6961"
+    "rolling": "#ff6961",
+    "collapsible_bg": "#3c3c3c",
+    "collapsible_hover_bg": "#4a4a4a"
   },
   "fonts": {
     "family": "Microsoft YaHei",

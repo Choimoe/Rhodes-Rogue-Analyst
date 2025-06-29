@@ -27,41 +27,74 @@ class StatsFrame(ttk.Frame):
     def __init__(self, parent, style_manager, **kwargs):
         super().__init__(parent, style="TFrame", **kwargs)
         self.style_manager = style_manager
-        self.frame = ttk.Frame(self, padding=(10, 5))
-        self.frame.pack(fill=tk.X)
-        self.frame.columnconfigure(1, weight=1)
+        self.is_expanded = tk.BooleanVar(value=True)
+
+        self._create_header()
+        self._create_content_frame()
+        self._bind_events()
+
+    def _create_header(self):
+        self.header_frame = ttk.Frame(self, style="Collapsible.TFrame", padding=(10, 8))
+        self.header_frame.pack(fill=tk.X)
+        self.header_frame.columnconfigure(0, weight=1)
+
+        self.title_label = ttk.Label(self.header_frame, text="战绩统计", style="Collapsible.TLabel")
+        self.title_label.grid(row=0, column=0, sticky="w")
+
+        self.toggle_button = ttk.Label(self.header_frame, text="▼", style="Collapsible.TLabel")
+        self.toggle_button.grid(row=0, column=1, sticky="e")
+
+    def _create_content_frame(self):
+        self.content_frame = ttk.Frame(self, padding=(10, 5, 10, 10))
+        self.content_frame.pack(fill=tk.X)
+        self.content_frame.columnconfigure(1, weight=1)
+
+    def _bind_events(self):
+        for widget in [self.header_frame, self.title_label, self.toggle_button]:
+            widget.bind("<Button-1>", self.toggle_visibility)
+            widget.bind("<Enter>", lambda e: self.header_frame.config(style="Collapsible.Hover.TFrame"))
+            widget.bind("<Leave>", lambda e: self.header_frame.config(style="Collapsible.TFrame"))
+
+    def toggle_visibility(self, event=None):
+        self.is_expanded.set(not self.is_expanded.get())
+        if self.is_expanded.get():
+            self.content_frame.pack(fill=tk.X)
+            self.toggle_button.config(text="▼")
+        else:
+            self.content_frame.pack_forget()
+            self.toggle_button.config(text="▶")
 
     def update_content(self, stats_data):
-        for widget in self.frame.winfo_children():
+        for widget in self.content_frame.winfo_children():
             widget.destroy()
 
-        title_label = ttk.Label(self.frame, text=f"战绩统计 (基于 {stats_data.get('total_runs', 0)} 场有效对局)",
-                                style="Header.TLabel")
-        title_label.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 5))
+        self.title_label.config(text=f"战绩统计 (基于 {stats_data.get('total_runs', 0)} 场有效对局)")
 
         total_stats = stats_data.get("total_stats", {})
         seven_day_stats = stats_data.get("seven_day_stats", {})
 
-        ttk.Label(self.frame, text=f"总胜率({stats_data.get('total_runs', 0)}场):").grid(row=1, column=0, sticky="w")
-        ttk.Label(self.frame,
+        ttk.Label(self.content_frame, text=f"总胜率({stats_data.get('total_runs', 0)}场):").grid(row=1, column=0,
+                                                                                                 sticky="w")
+        ttk.Label(self.content_frame,
                   text=f"{total_stats.get('win_rate', 'N/A')} (最高{total_stats.get('max_streak', 0)}连胜)").grid(row=1,
                                                                                                                   column=1,
                                                                                                                   sticky="w",
                                                                                                                   padx=10)
 
-        ttk.Label(self.frame, text="总五结局:").grid(row=2, column=0, sticky="w")
-        ttk.Label(self.frame,
+        ttk.Label(self.content_frame, text="总五结局:").grid(row=2, column=0, sticky="w")
+        ttk.Label(self.content_frame,
                   text=f"{total_stats.get('fifth_rate', 'N/A')} (最高{total_stats.get('max_fifth_streak', 0)}连胜)").grid(
             row=2, column=1, sticky="w", padx=10)
 
-        ttk.Label(self.frame, text=f"近7日({stats_data.get('seven_day_runs', 0)}场):").grid(row=3, column=0, sticky="w",
-                                                                                            pady=(5, 0))
-        ttk.Label(self.frame,
+        ttk.Label(self.content_frame, text=f"近7日({stats_data.get('seven_day_runs', 0)}场):").grid(row=3, column=0,
+                                                                                                    sticky="w",
+                                                                                                    pady=(5, 0))
+        ttk.Label(self.content_frame,
                   text=f"{seven_day_stats.get('win_rate', 'N/A')} (最高{seven_day_stats.get('max_streak', 0)}连胜)").grid(
             row=3, column=1, sticky="w", padx=10, pady=(5, 0))
 
-        ttk.Label(self.frame, text="近7日五结局:").grid(row=4, column=0, sticky="w")
-        ttk.Label(self.frame,
+        ttk.Label(self.content_frame, text="近7日五结局:").grid(row=4, column=0, sticky="w")
+        ttk.Label(self.content_frame,
                   text=f"{seven_day_stats.get('fifth_rate', 'N/A')} (最高{seven_day_stats.get('max_fifth_streak', 0)}连胜)").grid(
             row=4, column=1, sticky="w", padx=10)
 
@@ -114,7 +147,7 @@ class RunsListFrame(ttk.Frame):
                                                                                                              column=2,
                                                                                                              sticky="w",
                                                                                                              padx=(
-                                                                                                             0, 10))
+                                                                                                                 0, 10))
 
             result_frame = ttk.Frame(run_frame, style="TFrame")
             result_frame.grid(row=0, column=3, sticky="e")
