@@ -1,9 +1,12 @@
 import logging
 import json
+from pathlib import Path
 from typing import Optional, Dict, Any, List
+from collections import Counter
 from datetime import datetime, timedelta
 
 from .data_manager import DataManager
+from .alias_service import AliasService
 from ..utils import get_resource_path
 
 
@@ -11,6 +14,7 @@ class RogueService:
     def __init__(self, skland_client):
         self.client = skland_client
         self.db_manager = DataManager()
+        self.alias_service = AliasService()
         self._load_theme_config()
 
     def _load_theme_config(self):
@@ -120,12 +124,17 @@ class RogueService:
             fifth_win_bools = []
             if stats_def["rule"]["type"] == "is_win_and_has_ending":
                 ending_name_to_check = stats_def["rule"]["ending_name"]
-                for r in records:
-                    ending_str, _ = self._determine_ending(r, theme_config)
-                    is_fifth_win = r.get(keys["success_status"]) == 1 and f" {ending_name_to_check}" in ending_str
-                    fifth_win_bools.append(is_fifth_win)
+                ending_rule = next(
+                    (e for e in theme_config["ending_rules"]["endings"] if e["name"] == ending_name_to_check), None)
 
-            fifth_rate = (sum(fifth_win_bools) / total) * 100
+                if ending_rule:
+                    relic_to_check = ending_rule["relic"]
+                    fifth_win_bools = [
+                        r.get(keys["success_status"]) == 1 and relic_to_check in r.get(keys["relic_list"], [])
+                        for r in records
+                    ]
+
+            fifth_rate = (sum(fifth_win_bools) / total) * 100 if total > 0 else 0
             max_fifth_streak = self._calculate_max_streak(fifth_win_bools)
 
             return {
@@ -141,7 +150,8 @@ class RogueService:
         for record in all_records[:count]:
             ending_str, is_rolling = self._determine_ending(record, theme_config)
 
-            squad_name = record.get(keys["squad"][0], {}).get(keys["squad"][1], "N/A")
+            squad_name_full = record.get(keys["squad"][0], {}).get(keys["squad"][1], "N/A")
+            squad_alias = self.alias_service.get_squad_alias(squad_name_full)
 
             start_ts = int(record.get(keys["start_timestamp"], 0))
             end_ts = int(record.get(keys["end_timestamp"], 0))
@@ -154,7 +164,7 @@ class RogueService:
 
             detailed_recent_runs.append({
                 "difficulty": record.get(keys["difficulty"], "N/A"),
-                "squad": squad_name,
+                "squad": squad_alias,
                 "score": record.get(keys["score"], "N/A"),
                 "is_success": record.get(keys["success_status"]) == 1,
                 "ending": ending_str,
