@@ -1,37 +1,34 @@
 import os
 import logging
 import configparser
-
-from src.utils import get_resource_path, get_persistent_path
+import sys
+import tkinter as tk
+from tkinter import messagebox
 
 try:
+    from src.utils import get_resource_path, get_persistent_path
+    from src.bootstrap import ensure_token_configured
     from src.api.skland_client import SklandClient
     from src.services.rogue_service import RogueService
     from src.ui.app_window import AppWindow
     from src.ui.controller import UIController
 except ImportError as e:
-    logging.critical(f"启动失败: 无法导入必要的模块。请检查项目结构。 {e}")
-    exit()
+    root = tk.Tk()
+    root.withdraw()
+    messagebox.showerror("启动失败", f"无法导入必要的模块，请检查项目结构。\n\n{e}")
+    sys.exit(1)
 
 
 def load_config():
     parser = configparser.ConfigParser()
     config_path = get_resource_path("config/app_config.ini")
     if not os.path.exists(config_path):
-        logging.critical(f"配置文件未找到: {config_path}")
-        exit()
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("配置错误", "关键配置文件 app_config.ini 未找到。\n程序无法启动。")
+        sys.exit(1)
     parser.read(config_path, encoding='utf-8')
     return parser
-
-
-def load_token():
-    from dotenv import load_dotenv
-    load_dotenv()
-    token = os.getenv("HYPERGRYPH_TOKEN")
-    if not token:
-        logging.critical("HYPERGRYPH_TOKEN not found in .env file. Application cannot start.")
-        exit()
-    return token
 
 
 def setup_logging():
@@ -48,13 +45,19 @@ def setup_logging():
 
 
 def main():
+    hypergryph_token = ensure_token_configured()
+
     setup_logging()
+    logging.info("Token configured. Starting application.")
+
     config = load_config()
-    hypergryph_token = load_token()
 
     skland_client = SklandClient(config)
     if not skland_client.authenticate(hypergryph_token):
-        logging.critical("认证失败，程序退出。请检查你的Token。")
+        logging.critical("认证失败，请检查你的Token。")
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("认证失败", "无法通过您的Token进行认证。\n\n请检查.env文件中的HYPERGRYPH_TOKEN是否正确、有效。")
         return
 
     rogue_service = RogueService(skland_client)
