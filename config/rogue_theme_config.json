@@ -1,0 +1,50 @@
+{
+  "萨卡兹的无终奇语": {
+    "theme_id": "rogue_4",
+    "keys": {
+      "success_status": "success",
+      "relic_list": "gainRelicList",
+      "last_stage": "lastStage",
+      "squad": ["band", "name"],
+      "start_timestamp": "startTs",
+      "end_timestamp": "endTs",
+      "score": "score",
+      "difficulty": "modeGrade",
+      "totem_list": "totemList"
+    },
+    "analysis_rules": {
+      "min_score_for_valid": 100,
+      "primary_totem_id": "rogue_4_fragment_I_1"
+    },
+    "ending_rules": {
+      "is_rolling_relic": "rogue_4_relic_explore_7",
+      "endings": [
+        { "name": "2", "relic": "rogue_4_relic_final_1" },
+        { "name": "3", "relic": "rogue_4_relic_final_4" },
+        { "name": "4", "relic": "rogue_4_relic_final_6" },
+        { "name": "5", "relic": "rogue_4_relic_final_11" }
+      ],
+      "ending_5_companions": [
+        { "name": "超大蛋", "relic": "rogue_4_relic_final_10" },
+        { "name": "大蛋", "relic": "rogue_4_relic_final_9" },
+        { "name": "小蛋", "relic": "rogue_4_relic_final_8" }
+      ],
+      "default_win_ending": "1",
+      "text_templates": {
+        "failure": "驻足于: {last_stage}",
+        "failure_rolling": "驻足于: {last_stage} (滚动)",
+        "success": "完成结局: {endings}",
+        "success_rolling": "完成结局: 滚动 {endings}"
+      }
+    },
+    "stats_definitions": {
+      "fifth_ending": {
+        "name": "五结局",
+        "rule": {
+          "type": "is_win_and_has_ending",
+          "ending_name": "5"
+        }
+      }
+    }
+  }
+}
