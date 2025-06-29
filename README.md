@@ -28,7 +28,7 @@
 - 将下载好的 `.zip` 压缩包解压到您电脑上任意一个方便的位置，例如桌面。
 - 解压后，您会得到一个名为 `Rhodes-Rogue-Analyst` 的文件夹。
 
-![Rhodes-Rogue-Analyst](docs/pic/release_zip.jpg)
+![Rhodes-Rogue-Analyst的解压与结构](docs/pic/release_zip.jpg)
 
 ### 第 3 步：配置凭证
 
@@ -45,6 +45,7 @@
   4. **完整复制 `content` 字段后面的那一长串字符** (包括其中的 `+`、`/` 等所有符号)。
   5. 用记事本或任何文本编辑器打开程序文件夹内的 `.env` 文件。
   6. 将您复制好的那一长串字符，粘贴到 `HYPERGRYPH_TOKEN=""` 的双引号中间。
+    ![.env的设置](docs/pic/env.png)
 
 > [!WARNING] **您的 `HYPERGRYPH_TOKEN` 是非常私密的个人凭证，请绝对不要以任何形式分享给他人！如果需要他人帮助，请注意使用马赛克等工具隐藏自己的凭证。**
 >
@@ -54,6 +55,8 @@
 
 - **保存**并关闭 `.env` 文件。
 - 再次双击 `Rhodes-Rogue-Analyst.exe`，程序即可正常启动并开始分析您的数据。
+
+![成功运行](docs/pic/run.png)
 
 ## 🛠️ 如何开发
 
