@@ -17,42 +17,69 @@
 - **数据持久化:** 所有从API获取的对局记录都会被保存在本地数据库中，确保历史数据的完整性和分析的准确性。
 - **一键刷新:** 用户可以随时点击刷新按钮，从服务器获取最新的游戏数据。
 
-## 🏗️ 项目构建
+## 🚀 如何使用
+
+### 第 1 步：下载程序
+
+- 前往项目的 [**Releases 页面**](https://github.com/choimoe/Rhodes-Rogue-Analyst/releases)。
+- 根据您的操作系统，下载最新版本对应的压缩包。例如，Windows 用户请下载名为 `Rhodes-Rogue-Analyst-Windows.zip` 的文件。
+### 第 2 步：解压文件
+
+- 将下载好的 `.zip` 压缩包解压到您电脑上任意一个方便的位置，例如桌面。
+- 解压后，您会得到一个名为 `Rhodes-Rogue-Analyst` 的文件夹。
+
+![Rhodes-Rogue-Analyst](docs/pic/release_zip.jpg)
+
+### 第 3 步：配置凭证
+
+这是**最关键的一步**，用于授权程序读取您的游戏数据。
+
+- **首次运行**：
+  - 直接双击文件夹中的 `Rhodes-Rogue-Analyst.exe` (Windows) 或同名可执行文件 (macOS/Linux)。
+  - 程序会检测到您是首次运行，并弹出一个提示框，告知您需要配置凭证。
+  - 同时，程序会自动在文件夹内创建一个名为 `.env` 的文件。
+- **获取并填写凭证**：
+  1. 使用浏览器登录 [**森空岛官网**](https://www.skland.com/)。
+  2. 登录后，访问 [**这个链接**](https://web-api.skland.com/account/info/hg)。
+  3. 您会看到一段类似于 `{"code":0,"data":{"content":"一长串字符"},"msg":"..."}` 的文本。
+  4. **完整复制 `content` 字段后面的那一长串字符** (包括其中的 `+`、`/` 等所有符号)。
+  5. 用记事本或任何文本编辑器打开程序文件夹内的 `.env` 文件。
+  6. 将您复制好的那一长串字符，粘贴到 `HYPERGRYPH_TOKEN=""` 的双引号中间。
+
+> [!WARNING] **您的 `HYPERGRYPH_TOKEN` 是非常私密的个人凭证，请绝对不要以任何形式分享给他人！如果需要他人帮助，请注意使用马赛克等工具隐藏自己的凭证。**
+>
+> 正确填写后的 `.env` 文件内容示例如下： `HYPERGRYPH_TOKEN="A+B/Caaabbbccc+dd...."`
+
+### 第 4 步：再次运行
+
+- **保存**并关闭 `.env` 文件。
+- 再次双击 `Rhodes-Rogue-Analyst.exe`，程序即可正常启动并开始分析您的数据。
+
+## 🛠️ 如何开发
+
+本部分面向希望从源码运行、修改或贡献代码的开发者。
 
 ### 1. 环境准备
 
-确保你的计算机上已经安装了 Python 3。然后，克隆或下载本项目到本地。
+确保你的计算机上已经安装了 Python 3.10+（推荐使用虚拟环境）。然后，克隆本项目到本地。
+
+```
+git clone https://github.com/choimoe/Rhodes-Rogue-Analyst.git
+cd Rhodes-Rogue-Analyst
+```
 
 ### 2. 安装依赖
 
 本项目依赖 `requests` 和 `python-dotenv` 两个外部库。通过 pip 进行安装：
 
 ```
-pip install requests python-dotenv
+pip install -r requirements.txt
 ```
 
-### 3. 配置凭证 (Token)
+### 3. 配置凭证
 
-本应用需要你的森空岛 **`HYPERGRYPH_TOKEN`** 才能访问你的游戏数据。
-
-- **获取Token:**
-
-  1. 使用浏览器（推荐Chrome或Firefox）登录[森空岛官网](https://www.skland.com/)。
-  
-  2. 访问 [https://web-api.skland.com/account/info/hg](https://web-api.skland.com/account/info/hg) 得到类似下面的数据：
-  
-   ```
-     {"code":0,"data":{"content":"A+B/Caaabbbccc+dd"},"msg":"接口会返回您的鹰角网络通行证账号的登录凭证，此凭证可以用于鹰角网络账号系统校验您登录的有效性。泄露登录凭证属于极度危险操作，为了您的账号安全，请勿将此凭证以任何形式告知他人！"}
-   ```
-  复制这里 `content` 后面字符串的内容，如 `A+B/Caaabbbccc+dd`
-  
-  3. 在项目的根目录下，创建一个名为 `.env` 的文件。
-  
-  4. 在 `.env` 文件中，添加以下内容，并将 `你的TOKEN` （例如 `A+B/Caaabbbccc+dd`）替换为你刚刚复制的值：
-  
-  ```
-  HYPERGRYPH_TOKEN="A+B/Caaabbbccc+dd"
-  ```
+- 在项目的根目录下，创建一个名为 `.env` 的文件。
+- 按照上方“如何使用”第 3 步的说明，获取并填写您的 `HYPERGRYPH_TOKEN`。
 
 ### 4. 运行应用
 
