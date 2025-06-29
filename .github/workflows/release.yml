@@ -47,6 +47,7 @@ jobs:
             --noconsole \
             --add-data "config/app_config.ini:config" \
             --add-data "config/ui_theme.json:config" \
+            --add-data "config/rogue_theme_config.json:config" \
             --add-data ".env.example:." \
             --add-data "assets:assets" \
             --clean \

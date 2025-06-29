@@ -1,7 +1,8 @@
 import os
 import logging
 import configparser
-from pathlib import Path
+
+from src.utils import get_resource_path, get_persistent_path
 
 try:
     from src.api.skland_client import SklandClient
@@ -15,8 +16,8 @@ except ImportError as e:
 
 def load_config():
     parser = configparser.ConfigParser()
-    config_path = Path(__file__).parent / "config" / "app_config.ini"
-    if not config_path.exists():
+    config_path = get_resource_path("config/app_config.ini")
+    if not os.path.exists(config_path):
         logging.critical(f"配置文件未找到: {config_path}")
         exit()
     parser.read(config_path, encoding='utf-8')
@@ -34,13 +35,13 @@ def load_token():
 
 
 def setup_logging():
-    log_dir = Path(__file__).parent / "logs"
-    log_dir.mkdir(exist_ok=True)
+    log_dir = get_persistent_path("logs")
+    os.makedirs(log_dir, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(log_dir / "app.log", encoding='utf-8'),
+            logging.FileHandler(os.path.join(log_dir, "app.log"), encoding='utf-8'),
             logging.StreamHandler()
         ]
     )

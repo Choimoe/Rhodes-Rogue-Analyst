@@ -1,6 +1,7 @@
 from tkinter import ttk
 import json
-from pathlib import Path
+
+from src.utils import get_resource_path
 
 
 class StyleManager:
@@ -10,7 +11,7 @@ class StyleManager:
         self._configure_styles()
 
     def _load_theme(self):
-        theme_path = Path(__file__).parent.parent.parent / "config" / "ui_theme.json"
+        theme_path = get_resource_path("config/ui_theme.json")
         with open(theme_path, 'r', encoding='utf-8') as f:
             return json.load(f)
 

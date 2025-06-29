@@ -1,10 +1,10 @@
 import logging
 import json
-from pathlib import Path
 from typing import Optional, Dict, Any, List
-from collections import Counter
 from datetime import datetime, timedelta
+
 from .data_manager import DataManager
+from ..utils import get_resource_path
 
 
 class RogueService:
@@ -14,7 +14,7 @@ class RogueService:
         self._load_theme_config()
 
     def _load_theme_config(self):
-        config_path = Path(__file__).parent.parent.parent / "config" / "rogue_theme_config.json"
+        config_path = get_resource_path("config/rogue_theme_config.json")
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 self.theme_config = json.load(f)

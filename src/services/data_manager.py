@@ -1,15 +1,18 @@
+import os
 import sqlite3
 import json
 import logging
-from pathlib import Path
 from typing import List, Dict, Any
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "rogue_data.db"
+from src.utils import get_persistent_path
+
+DB_PATH = get_persistent_path("data/rogue_data.db")
 
 
 class DataManager:
     def __init__(self):
-        DB_PATH.parent.mkdir(exist_ok=True)
+        db_dir = os.path.dirname(DB_PATH)
+        os.makedirs(db_dir, exist_ok=True)
         self.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         self._create_table()
 
